@@ -1,0 +1,32 @@
+{
+  "name": "software-store-client",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.66.9",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-helmet-async": "^2.0.5",
+    "react-router-dom": "^7.18.4"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^26.0.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0",
+    "vitest": "^5.0.4"
+  }
+}

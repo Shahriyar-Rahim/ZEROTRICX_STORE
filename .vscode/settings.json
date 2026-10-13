@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^npm install$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
