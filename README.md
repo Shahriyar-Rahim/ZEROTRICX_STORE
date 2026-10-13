@@ -8,7 +8,60 @@
   <strong>Modern, secure software storefront for publishing and distributing applications</strong>
 </p>
 
-ZEROTRICX STORE is a full-stack software marketplace platform built to help a single owner manage, publish, and distribute desktop or web software. The project combines a React + TypeScript frontend with an Express + MongoDB backend and supports secure admin workflows, product publishing, release management, file storage, and public storefront browsing.
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/typescript-%3E%3D5.8-blue.svg)](https://www.typescriptlang.org/)
+[![Built with Vite](https://img.shields.io/badge/built%20with-vite-blueviolet.svg)](https://vitejs.dev/)
+
+---
+
+## Landing — What is ZEROTRICX STORE?
+
+ZEROTRICX STORE is a production-ready, single-owner software storefront designed to let an individual or small team publish, manage, and distribute application releases with minimal overhead. It provides a fast public storefront for discovery and a secure admin dashboard for release management, all built with modern web technologies and pluggable cloud storage.
+
+Why use ZEROTRICX STORE?
+
+- Launch and manage a software catalog quickly
+- Publish releases and host downloads with secure storage
+- Keep staging and public storage separate for safe uploads
+- Built with TypeScript and modern frameworks for maintainability
+
+---
+
+## Quick Start (3 steps)
+
+Perfect for GitHub visitors who want to try the project locally quickly:
+
+```bash
+# 1) Install
+npm install
+
+# 2) Start in development (frontend + backend)
+npm run dev
+
+# 3) Provision the first admin (in a private shell)
+export ADMIN_USERNAME=owner
+export ADMIN_EMAIL=you@example.com
+export ADMIN_PASSWORD='use-a-strong-password'
+npm run provision-admin
+unset ADMIN_PASSWORD
+```
+
+After that, open the storefront at: http://localhost:5173 — admin is available at /admin (API at http://localhost:5000).
+
+---
+
+## Screenshot
+
+Below is a placeholder screenshot — replace `client/public/screenshot.png` with an actual image exported from your local UI to show product pages or the admin dashboard.
+
+<p align="center">
+  <img src="./client/public/screenshot.png" alt="ZEROTRICX store screenshot (placeholder)" width="800" />
+</p>
+
+If you don't have a screenshot yet, the project logo is shown above. To add a screenshot, place a PNG at `client/public/screenshot.png` and commit it to the repo.
+
+---
 
 ## Overview
 
@@ -51,7 +104,7 @@ ZEROTRICX_STORE/
 │   ├── index.html         # Vite HTML entry
 │   ├── package.json       # Frontend scripts and dependencies
 │   ├── tsconfig.json      # Frontend TypeScript config
-│   └── vite.config.ts    # Vite configuration
+│   └── vite.config.ts     # Vite configuration
 ├── server/                # Backend API
 │   ├── src/               # Controllers, middleware, services, validators, models
 │   ├── package.json       # Backend scripts and dependencies
@@ -62,8 +115,7 @@ ZEROTRICX_STORE/
 ├── README.md              # Project documentation
 ├── LICENSE                # MIT license
 ├── .gitignore             # Git ignore rules
-├── package-lock.json      # Dependency lockfile
-└── .vscode/               # Local editor settings
+└── package-lock.json      # Dependency lockfile
 ```
 
 ## Features
@@ -183,10 +235,6 @@ The project includes a Render deployment configuration in `render.yaml`. For pro
 - Restrict MongoDB access to trusted sources
 - Keep staging and public storage buckets separate
 - Validate Cloudinary and email service configuration before production release
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
 
 ## Contributing
 
