@@ -27,6 +27,8 @@ export interface IStoreSettings {
   downloadDomain?: string;
   analyticsEnabled: boolean;
   maintenanceMode: boolean;
+  adminRateLimitExemptionMode: 'timed' | 'unlimited' | 'disabled';
+  adminRateLimitExemptionMinutes: number;
   footerText?: string;
   updatedAt: Date;
 }
@@ -79,6 +81,17 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument, IStoreSettingsMod
     maintenanceMode: {
       type: Boolean,
       default: false,
+    },
+    adminRateLimitExemptionMode: {
+      type: String,
+      enum: ['timed', 'unlimited', 'disabled'],
+      default: 'timed',
+    },
+    adminRateLimitExemptionMinutes: {
+      type: Number,
+      min: 1,
+      max: 1440,
+      default: 60,
     },
     footerText: {
       type: String,

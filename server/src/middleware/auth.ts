@@ -2,7 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { Admin } from '../models/Admin.js';
+import { StoreSettings } from '../models/StoreSettings.js';
 import { AdminTokenPayload } from '../types/index.js';
+import { isAdminRateLimitExempt } from './rateLimitExemption.js';
 
 export const AUTH_COOKIE_NAME = 'auth_token';
 
@@ -36,7 +38,10 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
 
     // Verify admin still exists in database and account is not locked
-    const admin = await Admin.findById(decoded.id);
+    const [admin, settings] = await Promise.all([
+      Admin.findById(decoded.id),
+      StoreSettings.getSettings(),
+    ]);
     if (!admin) {
       res.status(401).json({
         success: false,
@@ -75,6 +80,12 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       email: admin.email,
       role: admin.role,
       sessionVersion: admin.sessionVersion,
+      iat: decoded.iat,
+      rateLimitExempt: isAdminRateLimitExempt(
+        settings.adminRateLimitExemptionMode,
+        settings.adminRateLimitExemptionMinutes,
+        decoded.iat,
+      ),
     };
 
     next();

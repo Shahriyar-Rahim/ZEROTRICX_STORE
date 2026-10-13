@@ -6,6 +6,8 @@ export interface AdminTokenPayload {
   email: string;
   role: 'superadmin' | 'admin';
   sessionVersion: number;
+  iat?: number;
+  rateLimitExempt?: boolean;
 }
 
 export interface AuthenticatedRequest extends Request {

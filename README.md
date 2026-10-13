@@ -64,6 +64,10 @@ Never copy real secrets into `.env.example`, the client environment, source cont
 
 Configure one email provider in the API environment. For Resend, set `RESEND_API_KEY` and `EMAIL_FROM` to an address on a domain verified with Resend. For SMTP, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `EMAIL_FROM`; use `SMTP_SECURE=true` for implicit TLS (typically port 465), or `false` for STARTTLS (typically port 587). `SMTP_FROM` remains supported as a sender-address fallback, and `SMTP_USER` is the final SMTP sender fallback. `ADMIN_EMAIL` is only the destination for administrator notifications. Restart the API after changing provider settings. Admin login, email verification, email change, and two-factor codes are sent synchronously: the API reports success only after the provider accepts the message. Delivery failures return a specific error and logs omit message contents, codes, recipient addresses, and credentials.
 
+## Admin rate limits
+
+In Admin → Settings, choose a timed admin rate-limit exemption (60 minutes by default), unlimited exemption while an admin is signed in, or no exemption. Timed exemptions can be set from 1 to 1440 minutes. The setting applies immediately to authenticated sessions; login and two-factor login attempts and public requests remain rate-limited in every mode.
+
 ## Production deployment
 
 - Host the built `client/dist` assets on a static frontend host with HTTPS. Configure its SPA fallback to serve `index.html` for client-side routes. For SEO crawlers and social previews that do not execute JavaScript, add prerendering or server-side rendering before launch; Vite's client-rendered application alone is not full server-side SEO. Product pages set title, description, Open Graph, and canonical metadata at runtime.

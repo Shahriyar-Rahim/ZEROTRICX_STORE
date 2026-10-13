@@ -4199,6 +4199,12 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           description: form.get("seoDescription"),
                           keywords: [],
                         },
+                        adminRateLimitExemptionMode: form.get(
+                          "adminRateLimitExemptionMode",
+                        ),
+                        adminRateLimitExemptionMinutes: Number(
+                          form.get("adminRateLimitExemptionMinutes"),
+                        ),
                       }),
                     });
                     setSettingsMessage("Store settings saved.");
@@ -4324,6 +4330,42 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       defaultValue={settings.data.seoDefaults?.description}
                     />
                   </label>
+                </div>
+                <div className="admin-form-section">
+                  <h3>Admin rate limiting</h3>
+                  <p className="muted">
+                    Choose whether authenticated admins get a temporary or
+                    unlimited exemption. Login attempts and public requests
+                    remain rate-limited.
+                  </p>
+                  <div className="form-two">
+                    <label>
+                      Exemption policy
+                      <select
+                        name="adminRateLimitExemptionMode"
+                        defaultValue={
+                          settings.data.adminRateLimitExemptionMode || "timed"
+                        }
+                      >
+                        <option value="timed">Timed after login</option>
+                        <option value="unlimited">Unlimited while logged in</option>
+                        <option value="disabled">Disabled</option>
+                      </select>
+                    </label>
+                    <label>
+                      Timed exemption (minutes)
+                      <input
+                        name="adminRateLimitExemptionMinutes"
+                        type="number"
+                        min="1"
+                        max="1440"
+                        step="1"
+                        defaultValue={
+                          settings.data.adminRateLimitExemptionMinutes ?? 60
+                        }
+                      />
+                    </label>
+                  </div>
                 </div>
                 {settingsMessage && (
                   <div

@@ -12,7 +12,7 @@ import { downloadController } from './controllers/downloadController.js';
 import { adminController } from './controllers/adminController.js';
 import { requireAuth } from './middleware/auth.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
-import { generalLimiter, loginLimiter, downloadLimiter, uploadLimiter, reviewLimiter } from './middleware/rateLimiter.js';
+import { generalLimiter, loginLimiter, adminRateLimiter, downloadLimiter, uploadLimiter, reviewLimiter } from './middleware/rateLimiter.js';
 import { validate, validateQuery } from './middleware/validate.js';
 import { changePasswordSchema, currentPasswordSchema, emailChangeSchema, emailCodeSchema, loginSchema, verifyTwoFactorSchema } from './validators/auth.js';
 import { createApplicationSchema, updateApplicationSchema, applicationQuerySchema } from './validators/application.js';
@@ -94,12 +94,12 @@ app.get('/robots.txt', (_req, res) => {
 const authRouter = express.Router();
 authRouter.post('/login', loginLimiter, validate(loginSchema), asyncHandler(authController.login.bind(authController)));
 authRouter.post('/verify-two-factor', loginLimiter, validate(verifyTwoFactorSchema), asyncHandler(authController.verifyTwoFactor.bind(authController)));
-authRouter.post('/logout', requireAuth, asyncHandler(authController.logout.bind(authController)));
-authRouter.get('/me', requireAuth, asyncHandler(authController.getProfile.bind(authController)));
-authRouter.post('/change-password', requireAuth, validate(changePasswordSchema), asyncHandler(authController.changePassword.bind(authController)));
+authRouter.post('/logout', requireAuth, adminRateLimiter, asyncHandler(authController.logout.bind(authController)));
+authRouter.get('/me', requireAuth, adminRateLimiter, asyncHandler(authController.getProfile.bind(authController)));
+authRouter.post('/change-password', requireAuth, adminRateLimiter, validate(changePasswordSchema), asyncHandler(authController.changePassword.bind(authController)));
 authRouter.post('/email/verification/send', requireAuth, loginLimiter, asyncHandler(authController.sendEmailVerification.bind(authController)));
 authRouter.post('/email/verification/confirm', requireAuth, loginLimiter, validate(emailCodeSchema), asyncHandler(authController.verifyEmail.bind(authController)));
-authRouter.post('/email/change/request', requireAuth, loginLimiter, validate(emailChangeSchema), asyncHandler(authController.requestEmailChange.bind(authController)));
+authRouter.post('/email/change/request', requireAuth, loginLimiter, asyncHandler(authController.requestEmailChange.bind(authController)));
 authRouter.post('/email/change/confirm', requireAuth, loginLimiter, validate(emailCodeSchema), asyncHandler(authController.confirmEmailChange.bind(authController)));
 authRouter.post('/two-factor/setup', requireAuth, loginLimiter, asyncHandler(authController.setupTwoFactor.bind(authController)));
 authRouter.post('/two-factor/enable', requireAuth, loginLimiter, validate(emailCodeSchema), asyncHandler(authController.enableTwoFactor.bind(authController)));
@@ -107,7 +107,7 @@ authRouter.post('/two-factor/disable', requireAuth, loginLimiter, validate(curre
 app.use('/api/admin/auth', authRouter);
 
 const adminRouter = express.Router();
-adminRouter.use(requireAuth);
+adminRouter.use(requireAuth, adminRateLimiter);
 adminRouter.get('/dashboard', asyncHandler(adminController.dashboard.bind(adminController)));
 adminRouter.get('/analytics/monthly', asyncHandler(adminController.monthlyAnalytics.bind(adminController)));
 adminRouter.get('/applications', asyncHandler(applicationController.adminListApps.bind(applicationController)));

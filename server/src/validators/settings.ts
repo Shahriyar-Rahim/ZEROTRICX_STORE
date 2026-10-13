@@ -36,6 +36,8 @@ export const updateSettingsSchema = z.object({
   downloadDomain: z.string().optional(),
   analyticsEnabled: z.boolean().optional(),
   maintenanceMode: z.boolean().optional(),
+  adminRateLimitExemptionMode: z.enum(['timed', 'unlimited', 'disabled']).optional(),
+  adminRateLimitExemptionMinutes: z.number().int().min(1).max(1440).optional(),
   footerText: z.string().optional(),
 });
 

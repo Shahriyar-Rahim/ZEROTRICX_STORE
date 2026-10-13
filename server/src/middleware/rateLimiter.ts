@@ -4,6 +4,9 @@ import { env } from '../config/env.js';
 export const generalLimiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS,
   max: env.RATE_LIMIT_MAX,
+  skip: (req) => req.path.startsWith('/api/admin/')
+    && req.path !== '/api/admin/auth/login'
+    && req.path !== '/api/admin/auth/verify-two-factor',
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -18,6 +21,7 @@ export const generalLimiter = rateLimit({
 export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: env.LOGIN_RATE_LIMIT_MAX,
+  skip: (req) => req.admin?.rateLimitExempt === true,
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
@@ -26,6 +30,21 @@ export const loginLimiter = rateLimit({
     error: {
       code: 'LOGIN_RATE_LIMIT_EXCEEDED',
       message: 'Too many login attempts. Please try again after 15 minutes.',
+    },
+  },
+});
+
+export const adminRateLimiter = rateLimit({
+  windowMs: env.RATE_LIMIT_WINDOW_MS,
+  max: env.RATE_LIMIT_MAX,
+  skip: (req) => req.admin?.rateLimitExempt === true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many requests from this IP, please try again later.',
     },
   },
 });
@@ -47,6 +66,7 @@ export const downloadLimiter = rateLimit({
 export const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 60, // 60 upload requests per 15 minutes
+  skip: (req) => req.admin?.rateLimitExempt === true,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
