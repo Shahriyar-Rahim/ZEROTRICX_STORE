@@ -1,86 +1,197 @@
+# ZEROTRICX STORE
+
 <p align="center">
-  <img src="./client/public/zerotricx-store.svg" alt="ZEROTRICX STORE icon" width="128" height="128" />
+  <img src="./client/public/zerotricx-store.svg" alt="ZEROTRICX STORE logo" width="128" height="128" />
 </p>
 
-<h1 align="center">ZEROTRICX STORE</h1>
+<p align="center">
+  <strong>Modern, secure software storefront for publishing and distributing applications</strong>
+</p>
 
-A single-owner software storefront built with React, Vite, TypeScript, Express, MongoDB, and Cloudflare R2. Public browsing and downloads do not require a customer account. Only the administrator signs in.
+ZEROTRICX STORE is a full-stack software marketplace platform built to help a single owner manage, publish, and distribute desktop or web software. The project combines a React + TypeScript frontend with an Express + MongoDB backend and supports secure admin workflows, product publishing, release management, file storage, and public storefront browsing.
 
-## Local development
+## Overview
 
-Requirements: Node.js 20+, npm, and a MongoDB instance.
+This repository includes everything needed to run a software store, including:
 
-1. Copy `.env.example` to `.env`. Set `MONGODB_URI`; generate unique secrets with `openssl rand -base64 48` for `JWT_SECRET` and `SESSION_SECRET`.
-2. Install and build:
+- Public product catalog and detail pages
+- Software release and download management
+- Admin dashboard authentication and protected workflows
+- Product image management via Cloudinary
+- File storage with Cloudflare R2
+- Search, filtering, and metadata-driven product discovery
+- Deployment-focused configuration for production hosting
 
-   ```sh
-   npm install
-   npm run build
-   ```
+## Tech Stack
 
-3. Start the API and Vite frontend:
+### Frontend
+- React
+- Vite
+- TypeScript
+- React Router
+- Tailwind CSS
 
-   ```sh
-   npm run dev
-   ```
+### Backend
+- Node.js
+- Express
+- TypeScript
+- MongoDB with Mongoose
+- JWT and cookie-based authentication
+- Cloudinary SDK
+- Cloudflare R2 SDK
+- Nodemailer / Resend
 
-   The site is at `http://localhost:5173`; the API is at `http://localhost:5000`.
-4. Provision the first administrator. Do not put the password in shell history; export the variables in your private terminal/session first:
+## Project Structure
 
-   ```sh
-   export ADMIN_USERNAME=owner
-   export ADMIN_EMAIL=you@example.com
-   export ADMIN_PASSWORD='use-a-unique-14-character-or-longer-password'
-   npm run provision-admin
-   unset ADMIN_PASSWORD
-   ```
+```text
+ZEROTRICX_STORE/
+├── client/                # Frontend application
+│   ├── public/            # Logo and static assets
+│   ├── src/               # Components, pages, styles, and API client
+│   ├── index.html         # Vite HTML entry
+│   ├── package.json       # Frontend scripts and dependencies
+│   ├── tsconfig.json      # Frontend TypeScript config
+│   └── vite.config.ts    # Vite configuration
+├── server/                # Backend API
+│   ├── src/               # Controllers, middleware, services, validators, models
+│   ├── package.json       # Backend scripts and dependencies
+│   ├── tsconfig.json      # Backend TypeScript config
+│   └── ...
+├── package.json           # Root workspace scripts
+├── render.yaml            # Render deployment configuration
+├── README.md              # Project documentation
+├── LICENSE                # MIT license
+├── .gitignore             # Git ignore rules
+├── package-lock.json      # Dependency lockfile
+└── .vscode/               # Local editor settings
+```
 
-   Provisioning refuses duplicate accounts and never creates a default credential.
+## Features
 
-5. Sign in at `/admin`. Create the application and release, upload platform installers, then publish in order: application, release, and individual download. Uploads remain in the private staging bucket until the last step.
+- Modern storefront UI for software browsing and discovery
+- Admin-controlled application and release publishing workflow
+- Secure authentication for administrative actions
+- Product image uploads and storage integration
+- Download management with generated access flows
+- Cloud storage and staging bucket separation
+- Production deployment configuration
+- Test coverage via Vitest
 
-Run the focused checks with `npm test`.
+## Prerequisites
 
-## Product image uploads (Cloudinary)
+Before running the project locally, make sure you have:
 
-1. Create or sign in to a Cloudinary account and copy the cloud name, API key, and API secret from its dashboard.
-2. Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` in the root `.env` for local development or in the API host's environment settings for deployment. Keep the API secret server-side; never add it to a `VITE_` variable.
-3. In `/admin`, select or create an application. Choose its icon and screenshots from the admin image controls and save/upload. Images are uploaded by the authenticated API, organized under `software-store/apps/<application-id>`, and saved with their Cloudinary public IDs for later replacement/deletion. Icons are limited to 5 MB and screenshots to 10 MB; accepted formats are JPEG, PNG, WebP, and AVIF.
-4. Verify the Cloudinary account is active and has available storage/transformations. Image uploads fail explicitly if Cloudinary is not configured or rejects an upload.
+- Node.js 20+
+- npm
+- MongoDB instance or MongoDB Atlas connection
+- Optional: Cloudinary account
+- Optional: Cloudflare R2 account and buckets
 
-## Cloudflare R2 setup (manual)
+## Environment Setup
 
-The bucket, API token, DNS, and custom domain are not configured by this project. Complete these steps in the Cloudflare dashboard:
+Create a `.env` file in the project root and configure the required values.
 
-1. Create two separate R2 buckets: a **private staging** bucket and a **public downloads** bucket. Create an R2 API token limited to these buckets with object read/write/delete, copy, and multipart upload permissions. Set `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` (public), `R2_STAGING_BUCKET_NAME` (private), and `R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com` only in the backend environment. Production refuses a missing or identical staging bucket.
-2. Attach a download-only custom domain such as `downloads.example.com` to the public bucket only. Do not attach a public domain or enable public access for the staging bucket. Configure DNS and wait for Cloudflare to activate HTTPS. Set `R2_PUBLIC_BASE_URL=https://downloads.example.com`. Objects under generated `apps/<slug>/<version>/<os>-<arch>/<unique-filename>` paths are copied from staging to the public bucket only when an installer is published; disabling it moves the object back to staging.
-3. Do not expose R2 credentials in a Vite variable. The website creates short-lived presigned upload URLs for the private staging bucket; the browser never receives permanent keys.
-4. Configure bucket CORS on both buckets for the exact website origin only (for local development, `http://localhost:5173`). Set `AllowedMethods` to `PUT`, `AllowedHeaders` to `["*"]`, `ExposeHeaders` to `["ETag"]`, and `MaxAgeSeconds` to `3600`. Do not use `*` for allowed origins in production. The staging bucket must remain private regardless of CORS. If the browser reports that it cannot reach R2, confirm this CORS rule on the **staging** bucket and allow the frontend origin that is shown in the upload error.
-5. Uploads up to 100 MiB use a single presigned PUT. Larger files use presigned 10 MiB multipart chunks. After completion, the API checks exact object size and streams the stored object to calculate SHA-256 before marking it verified. R2 must be configured and reachable for this workflow.
+```env
+PORT=5000
+CLIENT_URL=http://localhost:5173
+SERVER_URL=http://localhost:5000
+MONGODB_URI=mongodb://localhost:27017/zerotricx-store
+JWT_SECRET=replace-with-a-long-random-secret
+SESSION_SECRET=replace-with-another-long-random-secret
 
-Never copy real secrets into `.env.example`, the client environment, source control, screenshots, or support logs.
+ADMIN_USERNAME=owner
+ADMIN_EMAIL=you@example.com
+ADMIN_PASSWORD=strong-password
 
-## Admin email and verification codes
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
 
-Configure one email provider in the API environment. For Resend, set `RESEND_API_KEY` and `EMAIL_FROM` to an address on a domain verified with Resend. For SMTP, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `EMAIL_FROM`; use `SMTP_SECURE=true` for implicit TLS (typically port 465), or `false` for STARTTLS (typically port 587). `SMTP_FROM` remains supported as a sender-address fallback, and `SMTP_USER` is the final SMTP sender fallback. `ADMIN_EMAIL` is only the destination for administrator notifications. Restart the API after changing provider settings. Admin login, email verification, email change, and two-factor codes are sent synchronously: the API reports success only after the provider accepts the message. Delivery failures return a specific error and logs omit message contents, codes, recipient addresses, and credentials.
+R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=your-r2-access-key
+R2_SECRET_ACCESS_KEY=your-r2-secret-key
+R2_PRIVATE_BUCKET=zerotricx-staging
+R2_PUBLIC_BUCKET=zerotricx-downloads
+R2_PUBLIC_DOMAIN=downloads.example.com
 
-## Admin rate limits
+RESEND_API_KEY=your-resend-key
+EMAIL_FROM=no-reply@example.com
+```
 
-In Admin → Settings, choose a timed admin rate-limit exemption (60 minutes by default), unlimited exemption while an admin is signed in, or no exemption. Timed exemptions can be set from 1 to 1440 minutes. The setting applies immediately to authenticated sessions; login and two-factor login attempts and public requests remain rate-limited in every mode.
+Keep secrets private and never commit them to version control.
 
-## Production deployment
+## Local Development
 
-- Host the built `client/dist` assets on a static frontend host with HTTPS. Configure its SPA fallback to serve `index.html` for client-side routes. For SEO crawlers and social previews that do not execute JavaScript, add prerendering or server-side rendering before launch; Vite's client-rendered application alone is not full server-side SEO. Product pages set title, description, Open Graph, and canonical metadata at runtime.
-- Host `server/dist` on a Node.js 20+ service. Route `/api/*`, `/health`, `/sitemap.xml`, and `/robots.txt` to the API. Set `CLIENT_URL` to the exact HTTPS frontend origin and `SERVER_URL` to the API origin. Use HTTPS and configure the trusted reverse-proxy count correctly for your host.
-- For Render, create a Blueprint from this repository using the root-level `render.yaml`. Keep the service root directory at the repository root so the npm workspaces and lockfile are available; the Blueprint installs development dependencies for the TypeScript build, builds the server workspace, and starts the compiled server. Add the required backend secrets and environment variables from `.env.example` in the Render dashboard.
-- Use MongoDB Atlas or another managed MongoDB service. Restrict network access, use a least-privilege database user, enable backups, and test restoration.
-- Set `NODE_ENV=production`, secure JWT/session secrets, MongoDB URI, R2 variables, Cloudinary credentials, upload limits, analytics retention, and an optional `COOKIE_DOMAIN`. Avoid `COOKIE_DOMAIN` unless the frontend and API cookie domain design requires it. Cookies are HttpOnly, Secure in production, and SameSite=Strict.
-- Configure monitoring for API health, failed storage operations, database errors, and backup status. Run `npm run build`, `npm test`, admin login/logout, a draft-to-publish flow (application → release → installer), a test R2 upload/checksum, and an anonymous public download before announcing the site.
+1. Install dependencies:
 
-## API overview
+```bash
+npm install
+```
 
-Public: `GET /api/apps`, `/api/apps/:slug`, `/api/categories`, `/api/releases/:releaseId`, `/api/downloads/:downloadId`, and `/api/downloads/:downloadId/redirect`.
+2. Build the application:
 
-Administrator endpoints live under `/api/admin`. The login endpoint sets an HttpOnly cookie; the remainder require a valid administrator cookie. `DELETE` operations involving R2 objects require `?confirm=true`. Download analytics count redirect clicks only and do not imply that an installer finished downloading.
+```bash
+npm run build
+```
 
-The sitemap lists published product URLs. Search/filter/pagination are MongoDB-backed. All published/download-enabled links are resolved server-side; public API responses do not contain R2 write credentials or object keys.
+3. Start the frontend and backend together:
+
+```bash
+npm run dev
+```
+
+The app will be available at:
+
+- Frontend: http://localhost:5173
+- API: http://localhost:5000
+
+## First Admin Setup
+
+Provision the first administrator account with:
+
+```bash
+export ADMIN_USERNAME=owner
+export ADMIN_EMAIL=you@example.com
+export ADMIN_PASSWORD='use-a-strong-password'
+npm run provision-admin
+unset ADMIN_PASSWORD
+```
+
+This prevents duplicate admin creation and avoids storing the password in shell history.
+
+## Testing
+
+```bash
+npm test
+```
+
+## Production Deployment
+
+The project includes a Render deployment configuration in `render.yaml`. For production deployment:
+
+- host the built frontend on a static hosting provider with HTTPS
+- run the Express server on a Node.js 20+ environment
+- configure MongoDB with secure credentials and backups
+- set all required environment variables in the hosting platform
+- configure Cloudinary and Cloudflare R2 correctly
+- verify CORS, domains, and upload/download flows before launch
+
+## Security Notes
+
+- Keep private storage credentials off the client
+- Use strong JWT and session secrets
+- Restrict MongoDB access to trusted sources
+- Keep staging and public storage buckets separate
+- Validate Cloudinary and email service configuration before production release
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome. If you would like to improve the platform, fix bugs, or expand features, please open an issue or submit a pull request with a clear description of the work.
+
+## Repository
+
+- GitHub: https://github.com/Shahriyar-Rahim/ZEROTRICX_STORE
