@@ -41,7 +41,7 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument, IStoreSettingsMod
   {
     storeName: {
       type: String,
-      default: 'ZEROTRICX Software',
+      default: 'ZEROTRICX STORE',
       required: true,
       trim: true,
     },
@@ -67,7 +67,7 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument, IStoreSettingsMod
       youtube: { type: String, default: '' },
     },
     seoDefaults: {
-      title: { type: String, default: 'ZEROTRICX Software - Download verified software' },
+      title: { type: String, default: 'ZEROTRICX STORE - Download verified software' },
       description: { type: String, default: 'Browse and download verified software securely.' },
       keywords: { type: [String], default: ['software', 'download', 'apps'] },
     },
@@ -94,6 +94,21 @@ StoreSettingsSchema.statics.getSettings = async function (): Promise<IStoreSetti
   let settings = await this.findOne();
   if (!settings) {
     settings = await this.create({});
+  } else {
+    let changed = false;
+    if (settings.storeName === 'ZEROTRICX Software') {
+      settings.storeName = 'ZEROTRICX STORE';
+      changed = true;
+    }
+    if (
+      settings.seoDefaults?.title ===
+      'ZEROTRICX Software - Download verified software'
+    ) {
+      settings.seoDefaults.title =
+        'ZEROTRICX STORE - Download verified software';
+      changed = true;
+    }
+    if (changed) await settings.save();
   }
   return settings;
 };

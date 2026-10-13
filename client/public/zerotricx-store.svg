@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">ZEROTRICX STORE</title>
+  <defs>
+    <linearGradient id="background" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1d3528"/>
+      <stop offset="1" stop-color="#0c1711"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="134" y1="142" x2="378" y2="370" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d8ff9d"/>
+      <stop offset="1" stop-color="#89d957"/>
+    </linearGradient>
+    <linearGradient id="glint" x1="372" y1="353" x2="404" y2="385" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d8ff9d"/>
+      <stop offset="1" stop-color="#5fbc76"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#background)"/>
+  <rect x="14" y="14" width="484" height="484" rx="116" fill="none" stroke="#d8ff9d" stroke-opacity=".12" stroke-width="4"/>
+  <path d="M134 142h244v63L228 308h150v62H134v-62l150-104H134v-62Z" fill="url(#mark)"/>
+  <path d="M384 356v12h12v12h-12v12h-12v-12h-12v-12h12v-12h12Z" fill="url(#glint)"/>
+</svg>

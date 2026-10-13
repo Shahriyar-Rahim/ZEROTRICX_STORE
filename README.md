@@ -1,4 +1,8 @@
-# ZEROTRICX Software Store
+<p align="center">
+  <img src="./client/public/zerotricx-store.svg" alt="ZEROTRICX STORE icon" width="128" height="128" />
+</p>
+
+<h1 align="center">ZEROTRICX STORE</h1>
 
 A single-owner software storefront built with React, Vite, TypeScript, Express, MongoDB, and Cloudflare R2. Public browsing and downloads do not require a customer account. Only the administrator signs in.
 

@@ -28,7 +28,7 @@ export const updateSettingsSchema = z.object({
     .optional(),
   seoDefaults: z
     .object({
-      title: z.string().optional().default('ZEROTRICX Software'),
+      title: z.string().optional().default('ZEROTRICX STORE'),
       description: z.string().optional().default('Download official software releases.'),
       keywords: z.array(z.string().trim()).optional().default([]),
     })

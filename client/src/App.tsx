@@ -186,7 +186,7 @@ function Header() {
               <Command size={19} />
             )}
           </span>
-          <span>{settings.data?.storeName || "ZEROTRICX Software"}</span>
+          <span>{settings.data?.storeName || "ZEROTRICX STORE"}</span>
         </Link>
         <nav className={open ? "nav-links open" : "nav-links"}>
           <NavLink to="/software">Explore software</NavLink>
@@ -225,7 +225,7 @@ function Footer() {
                 <Command size={19} />
               )}
             </span>
-            <span>{settings.data?.storeName || "ZEROTRICX Software"}</span>
+            <span>{settings.data?.storeName || "ZEROTRICX STORE"}</span>
           </Link>
           <p>
             {settings.data?.storeDescription ||
@@ -256,7 +256,7 @@ function Footer() {
       <div className="container footer-bottom">
         <span>
           {settings.data?.footerText ||
-            `© ${new Date().getFullYear()} ${settings.data?.storeName || "ZEROTRICX Software"}`}
+            `© ${new Date().getFullYear()} ${settings.data?.storeName || "ZEROTRICX STORE"}`}
         </span>
         <span>Built for the things you make.</span>
       </div>
@@ -527,7 +527,7 @@ function HomePage() {
   return (
     <Shell>
       <PageMeta
-        title="ZEROTRICX Software — useful tools, beautifully made"
+        title="ZEROTRICX STORE — useful tools, beautifully made"
         description="Discover carefully crafted desktop applications. Download official software for Windows, macOS, and Linux."
       />
       <section className="hero">
@@ -762,7 +762,7 @@ function CatalogPage() {
   return (
     <Shell>
       <PageMeta
-        title="Explore software — ZEROTRICX Software"
+        title="Explore software — ZEROTRICX STORE"
         description="Browse the complete collection of desktop software for Windows, macOS, and Linux."
       />
       <section className="page-hero">
@@ -942,8 +942,8 @@ function SoftwarePage() {
       <PageMeta
         title={
           app
-            ? `${app.name} — ZEROTRICX Software`
-            : "Software details — ZEROTRICX Software"
+            ? `${app.name} — ZEROTRICX STORE`
+            : "Software details — ZEROTRICX STORE"
         }
         description={
           app?.seoDescription ||
@@ -1388,7 +1388,7 @@ function InfoPage({ page }: { page: string }) {
   return (
     <Shell>
       <PageMeta
-        title={`${data.title} — ZEROTRICX Software`}
+        title={`${data.title} — ZEROTRICX STORE`}
         description={data.intro}
       />
       <section className="page-hero info-hero">
@@ -1433,7 +1433,7 @@ function NotFound() {
   return (
     <Shell>
       <PageMeta
-        title="Page not found — ZEROTRICX Software"
+        title="Page not found — ZEROTRICX STORE"
         description="The requested page could not be found."
       />
       <section className="not-found">
@@ -1493,7 +1493,7 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
   return (
     <main className="admin-login-wrap">
       <PageMeta
-        title="Administrator sign in — ZEROTRICX Software"
+        title="Administrator sign in — ZEROTRICX STORE"
         description="Private administrator sign in."
       />
       <div className="login-top-tools">
@@ -1503,7 +1503,7 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
         <span className="brand-mark">
           <Command size={18} />
         </span>
-        <span>ZEROTRICX Software</span>
+        <span>ZEROTRICX STORE</span>
       </Link>
       <form className="login-card" onSubmit={submit}>
         <div className="admin-lock">
@@ -2404,7 +2404,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="admin-shell">
       <PageMeta
-        title="Store dashboard — ZEROTRICX Software"
+        title="Store dashboard — ZEROTRICX STORE"
         description="Manage products, releases, downloads, and store analytics."
       />
       <aside className="admin-sidebar">
@@ -2412,7 +2412,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           <span className="brand-mark">
             <Command size={18} />
           </span>
-          <span>ZEROTRICX Software</span>
+          <span>ZEROTRICX STORE</span>
         </Link>
         <div className="admin-side-label">WORKSPACE</div>
         <NavLink
