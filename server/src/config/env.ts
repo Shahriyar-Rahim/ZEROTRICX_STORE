@@ -44,6 +44,14 @@ const envSchema = z.object({
     (value) => value === '' ? undefined : value,
     z.string().email().optional(),
   ),
+  RESEND_API_KEY: z.preprocess(
+    (value) => value === '' ? undefined : value,
+    z.string().optional(),
+  ),
+  EMAIL_FROM: z.preprocess(
+    (value) => value === '' ? undefined : value,
+    z.string().email().optional(),
+  ),
   ADMIN_EMAIL: z.string().email().optional(),
 
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(15 * 60 * 1000),

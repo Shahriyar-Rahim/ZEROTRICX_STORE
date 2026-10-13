@@ -62,7 +62,7 @@ Never copy real secrets into `.env.example`, the client environment, source cont
 
 ## Admin email and verification codes
 
-Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, and `SMTP_PASS` in the root `.env` (or the API host's secret environment). Set `SMTP_FROM` to an email address verified with the SMTP provider; if omitted, `SMTP_USER` is used as the sender. `ADMIN_EMAIL` is for administrative notifications and is not automatically used as the sender when SMTP credentials are set. Restart the API after changing these settings. Email verification and email-based two-factor codes cannot be delivered until SMTP is configured. A rejected message now returns a specific delivery error and logs only the SMTP error code and response code, not the message body or credentials.
+Configure one email provider in the API environment. For Resend, set `RESEND_API_KEY` and `EMAIL_FROM` to an address on a domain verified with Resend. For SMTP, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `EMAIL_FROM`; use `SMTP_SECURE=true` for implicit TLS (typically port 465), or `false` for STARTTLS (typically port 587). `SMTP_FROM` remains supported as a sender-address fallback, and `SMTP_USER` is the final SMTP sender fallback. `ADMIN_EMAIL` is only the destination for administrator notifications. Restart the API after changing provider settings. Admin login, email verification, email change, and two-factor codes are sent synchronously: the API reports success only after the provider accepts the message. Delivery failures return a specific error and logs omit message contents, codes, recipient addresses, and credentials.
 
 ## Production deployment
 

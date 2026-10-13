@@ -1,17 +1,33 @@
 import nodemailer, { Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 import { env } from '../config/env.js';
 import { AppError } from '../middleware/errorHandler.js';
 
+type AdminCodePurpose = 'login' | 'email verification' | 'email change' | 'two-factor setup';
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character]!);
+}
+
 export class EmailService {
   private transporter: Transporter | null = null;
-  private readonly sender = env.SMTP_FROM || env.SMTP_USER || env.ADMIN_EMAIL;
+  private resend: Resend | null = null;
+  private readonly sender = env.EMAIL_FROM || env.SMTP_FROM || env.SMTP_USER;
 
   constructor() {
-    if (env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS) {
+    if (env.RESEND_API_KEY) {
+      this.resend = new Resend(env.RESEND_API_KEY);
+    } else if (env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS) {
       this.transporter = nodemailer.createTransport({
         host: env.SMTP_HOST,
         port: env.SMTP_PORT || 587,
-        secure: env.SMTP_SECURE || false,
+        secure: env.SMTP_SECURE ?? env.SMTP_PORT === 465,
         auth: {
           user: env.SMTP_USER,
           pass: env.SMTP_PASS,
@@ -21,72 +37,106 @@ export class EmailService {
   }
 
   async sendAdminNotification(subject: string, html: string): Promise<void> {
-    if (!this.transporter || !this.sender || !env.ADMIN_EMAIL) {
-      throw new Error('Email notifications are not configured.');
+    if (!env.ADMIN_EMAIL) {
+      throw new AppError('Set ADMIN_EMAIL to receive administrator notifications.', 503, 'EMAIL_NOT_CONFIGURED');
     }
-
-    await this.transporter.sendMail({
-      from: this.sender,
+    await this.sendMessage({
       to: env.ADMIN_EMAIL,
       subject,
       html,
+      text: html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(),
     });
   }
 
-  async sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
-    const resetUrl = `${env.CLIENT_URL}/admin/reset-password?token=${encodeURIComponent(resetToken)}`;
-    const html = `
-      <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
-        <h2>Password Reset Request</h2>
-        <p>You have requested a password reset for your ZEROTRICX Software administrator account.</p>
-        <p>Click the link below to set a new password. This link is valid for 1 hour.</p>
-        <p style="margin: 20px 0;">
-          <a href="${resetUrl}" style="background-color: #2563eb; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
-        </p>
-        <p>If you did not request this, please ignore this email.</p>
-      </div>
-    `;
-
-    if (!this.transporter) {
-      throw new Error('Password reset email delivery is not configured.');
-    }
-
-    await this.transporter.sendMail({
-      from: this.sender,
-      to: email,
-      subject: 'ZEROTRICX Software - Password Reset Request',
-      html,
-    });
-  }
-
-  async sendAdminCode(email: string, purpose: 'login' | 'email verification' | 'email change' | 'two-factor setup', code: string): Promise<void> {
-    if (!this.transporter || !this.sender) {
+  private async sendMessage(message: { to: string; subject: string; text: string; html: string }): Promise<void> {
+    const resend = this.resend;
+    const transporter = this.transporter;
+    if (!this.sender) {
       throw new AppError(
-        'Admin email delivery is not configured. Configure SMTP_HOST, SMTP_USER, SMTP_PASS, and a verified SMTP_FROM address.',
+        'Set EMAIL_FROM to an address verified with your email provider.',
         503,
         'EMAIL_NOT_CONFIGURED',
       );
     }
+    if (!resend && !transporter) {
+      throw new AppError(
+        'Configure RESEND_API_KEY or SMTP_HOST, SMTP_USER, and SMTP_PASS to enable email delivery.',
+        503,
+        'EMAIL_NOT_CONFIGURED',
+      );
+    }
+
     try {
-      await this.transporter.sendMail({
+      if (resend) {
+        const { error } = await resend.emails.send({
+          from: this.sender,
+          to: message.to,
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+        });
+        if (error) {
+          throw Object.assign(new Error('Resend rejected the email request.'), {
+            code: error.name,
+            responseCode: Number(error.statusCode),
+          });
+        }
+        return;
+      }
+
+      if (!transporter) {
+        throw new Error('SMTP transport is unavailable.');
+      }
+      await transporter.sendMail({
         from: this.sender,
-        to: email,
-        subject: `ZEROTRICX Software admin ${purpose} code`,
-        text: `Your ${purpose} code is ${code}. It expires in 10 minutes. If you did not request this code, you can ignore this email.`,
-        html: `<p>Your ${purpose} code is <strong>${code}</strong>.</p><p>It expires in 10 minutes. If you did not request this code, you can ignore this email.</p>`,
+        to: message.to,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
       });
     } catch (error) {
-      const smtpError = error as Error & { code?: string; responseCode?: number };
-      console.error(`[Email] Admin code delivery failed: ${smtpError.code || smtpError.name || 'Error'} (${smtpError.responseCode || 'no SMTP response code'})`);
-      const rejectedByServer = smtpError.code === 'EMESSAGE' || Boolean(smtpError.responseCode);
+      const deliveryError = error as Error & { code?: string; responseCode?: number };
+      const errorCode = deliveryError.code || deliveryError.name || 'Error';
+      const responseCode = deliveryError.responseCode;
+      console.error(`[Email] Delivery failed via ${resend ? 'Resend' : 'SMTP'}: ${errorCode} (response ${responseCode || 'unavailable'})`);
+
+      const rejectedByServer = resend
+        ? responseCode !== undefined
+          && responseCode >= 400
+          && responseCode < 500
+          && ![408, 425, 429].includes(responseCode)
+        : deliveryError.code === 'EMESSAGE'
+          || (responseCode !== undefined && responseCode >= 500);
       throw new AppError(
         rejectedByServer
-          ? 'The SMTP server rejected the verification email. Check that SMTP_FROM is an address verified with your email provider and that the recipient address can receive mail.'
-          : 'The verification email could not be sent because the SMTP service could not be reached. Check SMTP_HOST, SMTP_PORT, SMTP_SECURE, and SMTP credentials.',
+          ? 'The email provider rejected the message. Verify the sender address and provider configuration.'
+          : 'The email could not be sent because the provider is unavailable or its configuration is invalid.',
         rejectedByServer ? 502 : 503,
         rejectedByServer ? 'EMAIL_DELIVERY_FAILED' : 'EMAIL_TRANSPORT_UNAVAILABLE',
       );
     }
+  }
+
+  async sendAdminCode(email: string, purpose: AdminCodePurpose, code: string): Promise<void> {
+    const safePurpose = escapeHtml(purpose);
+    const safeCode = escapeHtml(code);
+    const text = `Your ${purpose} code is ${code}. It expires in 10 minutes. Never share this code. If you did not request it, you can ignore this email.`;
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#14251c;line-height:1.6">
+        <h2 style="margin:0 0 20px">ZEROTRICX STORE</h2>
+        <p>Use this code to complete your admin ${safePurpose}:</p>
+        <p style="margin:24px 0;padding:18px;background:#f3f6f3;border-radius:8px;text-align:center">
+          <strong style="font-size:30px;letter-spacing:8px">${safeCode}</strong>
+        </p>
+        <p>This code expires in 10 minutes. Never share it with anyone.</p>
+        <p style="color:#58645d">If you did not request this code, you can ignore this email.</p>
+      </div>`;
+    await this.sendMessage({
+      to: email,
+      subject: `ZEROTRICX STORE admin ${purpose} code`,
+      text,
+      html,
+    });
   }
 }
 
