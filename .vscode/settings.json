@@ -3,6 +3,7 @@
         "/^npm install$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "npm run build": true
     }
 }
