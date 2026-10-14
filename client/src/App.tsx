@@ -1990,10 +1990,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [githubImporting, setGithubImporting] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [githubMessage, setGithubMessage] = useState("");
-  const [profileMessage, setProfileMessage] = useState("");
-  const [profileMessageKind, setProfileMessageKind] = useState<
-    "success" | "error"
-  >("success");
   const [verificationCode, setVerificationCode] = useState("");
   const [emailChangeCode, setEmailChangeCode] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
@@ -2008,10 +2004,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         .data,
   });
   const [selected, setSelected] = useState<AppProduct | null>(null);
-  const [message, setMessage] = useState("");
-  const [messageKind, setMessageKind] = useState<"success" | "error">(
-    "success",
-  );
+  const [toast, setToast] = useState<{
+    text: string;
+    kind: "success" | "error";
+    id: number;
+  } | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [selectedInstallerFiles, setSelectedInstallerFiles] = useState<Record<string, File | undefined>>({});
@@ -2025,7 +2022,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [savingApplication, setSavingApplication] = useState(false);
   const [savingApplicationDetails, setSavingApplicationDetails] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
-  const [settingsMessage, setSettingsMessage] = useState("");
   async function runPendingAction(
     action: string,
     callback: () => Promise<unknown>,
@@ -2037,6 +2033,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     } finally {
       setPendingAction(null);
     }
+    useEffect(() => {
+      if (!toast) return;
+      const timeout = window.setTimeout(() => setToast(null), 6000);
+      return () => window.clearTimeout(timeout);
+    }, [toast]);
   }
   const stats = useQuery({
     queryKey: ["admin-dashboard"],
@@ -2079,8 +2080,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     return matchesStatus && matchesSearch;
   });
   function notify(text: string, kind: "success" | "error" = "success") {
-    setMessage(text);
-    setMessageKind(kind);
+    setToast((current) => ({
+      text,
+      kind,
+      id: (current?.id || 0) + 1,
+    }));
   }
   async function importGithubDetails(formElement: HTMLFormElement) {
     setGithubMessage("");
@@ -2105,11 +2109,15 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       setGithubMessage(
         "Repository details loaded. Review the imported fields and complete any missing details before saving.",
       );
+      notify("GitHub repository details loaded.", "success");
     } catch (error) {
-      setGithubMessage(
+      const message =
         (error as Error).message ||
-          "GitHub repository details could not be loaded.",
+        "GitHub repository details could not be loaded.";
+      setGithubMessage(
+        message,
       );
+      notify(message, "error");
     } finally {
       setGithubImporting(false);
     }
@@ -2133,8 +2141,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }
   }
   function profileFeedback(message: string, error = false) {
-    setProfileMessage(message);
-    setProfileMessageKind(error ? "error" : "success");
+    notify(message, error ? "error" : "success");
   }
   async function requestEmailVerification() {
     try {
@@ -2269,7 +2276,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       notify("Release created. Add its installers below.");
       void client.invalidateQueries({ queryKey: ["admin-releases"] });
     },
-    onError: (error: Error) => setReleaseError(error.message),
+    onError: (error: Error) => {
+      setReleaseError(error.message);
+      notify(error.message, "error");
+    },
   });
 
   async function logout() {
@@ -2357,9 +2367,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       if (createdApp) {
         setSelected(createdApp);
         formElement.reset();
-        setAppError(
-          `Your draft was saved, but an image upload failed: ${(error as Error).message}. The saved draft is selected below; retry any missing images there.`,
-        );
+        const message = `Your draft was saved, but an image upload failed: ${(error as Error).message}. The saved draft is selected below; retry any missing images there.`;
+        setAppError(message);
+        notify(message, "error");
         window.setTimeout(
           () =>
             document
@@ -2368,12 +2378,12 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           80,
         );
       } else {
-        setAppError(
+        const message =
           (error as Error).message ||
-            "The product could not be saved. Check the highlighted details and try again.",
-        );
+          "The product could not be saved. Check the highlighted details and try again.";
+        setAppError(message);
+        notify(message, "error");
       }
-      setMessageKind("error");
       void client.invalidateQueries({ queryKey: ["admin-applications"] });
     } finally {
       setSavingApplication(false);
@@ -2453,7 +2463,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       void client.invalidateQueries({ queryKey: ["admin-applications"] });
       void client.invalidateQueries({ queryKey: ["apps"] });
     } catch (error) {
-      setAppError((error as Error).message);
+      const message = (error as Error).message;
+      setAppError(message);
+      notify(message, "error");
     }
   }
 
@@ -2500,9 +2512,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       void client.invalidateQueries({ queryKey: ["apps"] });
     } catch (error) {
       setSelected(updated);
-      setAppError(
-        `Some images may already have uploaded. ${(error as Error).message} Completed uploads are saved; retry any images that are still missing.`,
-      );
+      const message = `Some images may already have uploaded. ${(error as Error).message} Completed uploads are saved; retry any images that are still missing.`;
+      setAppError(message);
+      notify(message, "error");
       void client.invalidateQueries({ queryKey: ["admin-applications"] });
     } finally {
       setUploadingImages(false);
@@ -2601,8 +2613,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     release: Release,
   ) {
     event.preventDefault();
-    setMessage("");
-    setMessageKind("success");
+    setToast(null);
     setBusy(true);
     setUploadProgress(0);
     const formElement = event.currentTarget;
@@ -2834,16 +2845,26 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             </button>
           </div>
         </header>
-        {message && (
+        {toast && (
           <div
-            className="admin-message"
-            role={messageKind === "error" ? "alert" : "status"}
+            key={toast.id}
+            className={`toast-popup ${toast.kind}`}
+            role={toast.kind === "error" ? "alert" : "status"}
+            aria-live={toast.kind === "error" ? "assertive" : "polite"}
           >
-            {messageKind === "error" ? <X size={16} /> : <Check size={16} />}
-            {message}
-            <button aria-label="Dismiss message" onClick={() => setMessage("")}>
-              <X size={15} />
+            <span className="toast-icon">
+              {toast.kind === "error" ? <X size={18} /> : <Check size={18} />}
+            </span>
+            <span className="toast-text">{toast.text}</span>
+            <button
+              type="button"
+              className="toast-close"
+              aria-label="Close notification"
+              onClick={() => setToast(null)}
+            >
+              <X size={17} />
             </button>
+            <span className="toast-progress" />
           </div>
         )}
         {activeSection === "overview" && (
@@ -3819,14 +3840,22 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             window.confirm(
                               `Permanently delete release ${release.version} and its installers?`,
                             )
-                          ) {
-                            await api(
-                              `/admin/releases/${release._id}?confirm=true`,
-                              { method: "DELETE" },
-                            );
-                            void client.invalidateQueries({
-                              queryKey: ["admin-releases"],
-                            });
+                          )                           {
+                            try {
+                              await api(
+                                `/admin/releases/${release._id}?confirm=true`,
+                                { method: "DELETE" },
+                              );
+                              notify(`Release ${release.version} and its installers were deleted.`);
+                              void client.invalidateQueries({
+                                queryKey: ["admin-releases"],
+                              });
+                            } catch (error) {
+                              notify(
+                                (error as Error).message || "Could not delete the release.",
+                                "error",
+                              );
+                            }
                           }
                         }}
                       >
@@ -4322,18 +4351,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 </div>
               </div>
             )}
-            {profileMessage && (
-              <div
-                className={
-                  profileMessageKind === "error"
-                    ? "inline-error"
-                    : "admin-message"
-                }
-                role={profileMessageKind === "error" ? "alert" : "status"}
-              >
-                {profileMessage}
-              </div>
-            )}
             <div className="security-tools">
               {!adminProfile.data?.emailVerified && (
                 <div className="security-card">
@@ -4649,7 +4666,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         ),
                       }),
                     });
-                    setSettingsMessage("Store settings saved.");
+                    notify("Store settings saved.");
                     void client.invalidateQueries({
                       queryKey: ["admin-settings"],
                     });
@@ -4657,7 +4674,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       queryKey: ["public-settings"],
                     });
                   } catch (error) {
-                    setSettingsMessage((error as Error).message);
+                    notify((error as Error).message, "error");
                   }
                 }}
               >
@@ -4809,17 +4826,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </label>
                   </div>
                 </div>
-                {settingsMessage && (
-                  <div
-                    className={
-                      settingsMessage.includes("saved")
-                        ? "admin-message"
-                        : "inline-error"
-                    }
-                  >
-                    {settingsMessage}
-                  </div>
-                )}
                 <button className="button button-dark">
                   Save store settings <Check size={15} />
                 </button>
