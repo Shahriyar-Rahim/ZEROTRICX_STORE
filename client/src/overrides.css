@@ -162,6 +162,7 @@ body{font-size:16px}
 .product-rating>b{font-size:14px}
 .product-rating>small,.product-meta,.tag{font-size:12px}
 .footer-main p,.footer-links a,.footer-bottom{font-size:13px}
+.footer-copyright{flex:1;min-width:0;overflow-wrap:anywhere}
 .catalog-tools input,.catalog-tools select,.pagination span{font-size:14px}
 .admin-main{font-size:15px}
 .admin-main label,.admin-panel>p,.admin-content-grid p{font-size:14px}

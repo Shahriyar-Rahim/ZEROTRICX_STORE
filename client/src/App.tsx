@@ -189,7 +189,8 @@ function Header() {
               <Command size={19} />
             )}
           </span>
-          <span>{settings.data?.storeName || "ZEROTRICX STORE"}</span>
+          {/* <span>{settings.data?.storeName || "ZEROTRICX STORE"}</span> */}
+          <span>ZEROTRICX STORE</span>
         </Link>
         <nav className={open ? "nav-links open" : "nav-links"}>
           <NavLink to="/software">Explore software</NavLink>
@@ -216,6 +217,9 @@ function Footer() {
     queryKey: ["public-settings"],
     queryFn: async () => (await api<ApiResult<any>>("/settings/public")).data,
   });
+  const footerText = settings.data?.footerText?.trim();
+  // const storeName = settings.data?.storeName?.trim() || "ZEROTRICX STORE";
+  const storeName = "ZEROTRICX STORE";
   return (
     <footer className="footer">
       <div className="container footer-main">
@@ -257,9 +261,8 @@ function Footer() {
         </div>
       </div>
       <div className="container footer-bottom">
-        <span>
-          {settings.data?.footerText ||
-            `© ${new Date().getFullYear()} ${settings.data?.storeName || "ZEROTRICX STORE"}`}
+        <span className="footer-copyright">
+          {footerText || `© ${new Date().getFullYear()} ${storeName}`}
         </span>
         <span>Built for the things you make.</span>
       </div>

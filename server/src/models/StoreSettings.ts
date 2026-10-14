@@ -96,6 +96,7 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument, IStoreSettingsMod
     footerText: {
       type: String,
       default: '© All rights reserved.',
+      trim: true,
     },
   },
   {
