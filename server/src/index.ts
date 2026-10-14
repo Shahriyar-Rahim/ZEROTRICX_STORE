@@ -27,7 +27,7 @@ import { createReviewSchema, moderateReviewSchema } from './validators/review.js
 
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', env.NODE_ENV === 'production' ? 1 : false);
+app.set('trust proxy', env.TRUST_PROXY_HOPS);
 app.use(helmet());
 app.use(cors({
   origin(origin, callback) { callback(null, !origin || origin === env.CLIENT_URL); },

@@ -23,8 +23,15 @@ export class ApplicationController {
       return;
     }
     const [, owner, repository] = match;
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'Northstar-Software-Store',
+    };
+    if (env.GITHUB_TOKEN) {
+      headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+    }
     const upstream = await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}`, {
-      headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Northstar-Software-Store' },
+      headers,
       signal: AbortSignal.timeout(7000),
     });
     if (upstream.status === 404) {
@@ -32,7 +39,8 @@ export class ApplicationController {
       return;
     }
     if (!upstream.ok) {
-      res.status(502).json({ success: false, error: { code: 'GITHUB_UNAVAILABLE', message: upstream.status === 403 ? 'GitHub API rate limit reached. Try again later.' : 'GitHub could not provide repository details right now.' } });
+      const rateLimited = upstream.status === 429 || upstream.status === 403;
+      res.status(502).json({ success: false, error: { code: 'GITHUB_UNAVAILABLE', message: rateLimited ? 'GitHub API rate limit reached. Try again later.' : 'GitHub could not provide repository details right now.' } });
       return;
     }
     const data = await upstream.json() as {

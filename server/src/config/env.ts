@@ -8,8 +8,13 @@ dotenv.config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../..
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(5000),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
   SERVER_URL: z.string().url().default('http://localhost:5000'),
   CLIENT_URL: z.string().url().default('http://localhost:5173'),
+  GITHUB_TOKEN: z.preprocess(
+    (value) => value === '' ? undefined : value,
+    z.string().min(1).optional(),
+  ),
 
   MONGODB_URI: z.string().min(1).default('mongodb://127.0.0.1:27017/software-store'),
 
