@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Modern, secure software storefront for publishing and distributing applications</strong>
+  <strong>Modern, secure ZEROTRICX storefront for publishing and distributing applications</strong>
 </p>
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
@@ -17,7 +17,7 @@
 
 ## Landing — What is ZEROTRICX STORE?
 
-ZEROTRICX STORE is a production-ready, single-owner software storefront designed to let an individual or small team publish, manage, and distribute application releases with minimal overhead. It provides a fast public storefront for discovery and a secure admin dashboard for release management, all built with modern web technologies and pluggable cloud storage.
+ZEROTRICX STORE is a production-ready, single-owner ZEROTRICX storefront designed to let an individual or small team publish, manage, and distribute application releases with minimal overhead. It provides a fast public storefront for discovery and a secure admin dashboard for release management, all built with modern web technologies and pluggable cloud storage.
 
 Why use ZEROTRICX STORE?
 
@@ -65,7 +65,7 @@ If you don't have a screenshot yet, the project logo is shown above. To add a sc
 
 ## Overview
 
-This repository includes everything needed to run a software store, including:
+This repository includes everything needed to run a ZEROTRICX store, including:
 
 - Public product catalog and detail pages
 - Software release and download management

@@ -38,12 +38,15 @@ import {
   PackageCheck,
   Pin,
   Search,
+  Share2,
   ShieldCheck,
   Sparkles,
   Sun,
   Trash2,
   Type,
   X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import {
   api,
@@ -315,9 +318,128 @@ function RequestState({
   return <>{children}</>;
 }
 
+function ImageUploadFields({
+  iconLabel,
+  screenshotsLabel,
+}: {
+  iconLabel: string;
+  screenshotsLabel: string;
+}) {
+  const [iconPreview, setIconPreview] = useState("");
+  const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
+  const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
+  useEffect(() => {
+    if (!iconPreview) return;
+    return () => URL.revokeObjectURL(iconPreview);
+  }, [iconPreview]);
+  useEffect(() => {
+    const previews = screenshotFiles.map((file) => URL.createObjectURL(file));
+    setScreenshotPreviews(previews);
+    return () => previews.forEach((preview) => URL.revokeObjectURL(preview));
+  }, [screenshotFiles]);
+
+  return (
+    <>
+      <div className="form-two image-upload-fields">
+        <label>
+          {iconLabel} <small>JPEG, PNG, WebP, or AVIF · max 5 MB</small>
+          <input
+            name="iconFile"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/avif"
+            onChange={(event) =>
+              setIconPreview(
+                event.currentTarget.files?.[0]
+                  ? URL.createObjectURL(event.currentTarget.files[0])
+                  : "",
+              )
+            }
+          />
+          {iconPreview && (
+            <span className="image-upload-preview">
+              <img src={iconPreview} alt="Selected app icon preview" />
+              <small>Icon preview</small>
+            </span>
+          )}
+        </label>
+        <label>
+          {screenshotsLabel}{" "}
+          <small>Select multiple images · max 10 MB each</small>
+          <input
+            name="screenshotFiles"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/avif"
+            multiple
+            onChange={(event) =>
+              setScreenshotFiles(Array.from(event.currentTarget.files || []))
+            }
+          />
+          {!!screenshotFiles.length && (
+            <span className="image-upload-preview-grid">
+              {screenshotFiles.map((file, index) => (
+                <span key={`${file.name}-${index}`}>
+                  <img
+                    src={screenshotPreviews[index]}
+                    alt={`Selected screenshot ${index + 1} preview`}
+                  />
+                  <small>{file.name}</small>
+                </span>
+              ))}
+            </span>
+          )}
+        </label>
+      </div>
+      <label>
+        Screenshot captions{" "}
+        <small>One optional caption per selected image, in order.</small>
+        <textarea
+          name="screenshotCaptions"
+          rows={2}
+          placeholder="A clear view of the main screen"
+        />
+      </label>
+    </>
+  );
+}
+
+async function sharePage(title: string, url: string): Promise<void> {
+  if (navigator.share) {
+    await navigator.share({ title, url });
+    return;
+  }
+  await navigator.clipboard.writeText(url);
+}
+
 function ProductCard({ product }: { product: AppProduct }) {
   const rating = product.reviewCount ? (product.ratingAverage ?? 4) : 4;
   const roundedRating = Math.round(rating);
+  const [downloadsOpen, setDownloadsOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareMessage, setShareMessage] = useState("");
+  const availableDownloads = useQuery({
+    queryKey: ["app-downloads", product.slug],
+    enabled: downloadsOpen,
+    queryFn: async () =>
+      (
+        await api<ApiResult<AppProduct>>(
+          `/apps/${encodeURIComponent(product.slug)}`,
+        )
+      ).data,
+  });
+  async function share() {
+    setSharing(true);
+    setShareMessage("");
+    try {
+      await sharePage(product.name, `${window.location.origin}/software/${product.slug}`);
+      setShareMessage("Link shared.");
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        setShareMessage("Could not share this link.");
+      }
+    } finally {
+      setSharing(false);
+    }
+  }
   return (
     <article className="product-card">
       <Link
@@ -362,6 +484,64 @@ function ProductCard({ product }: { product: AppProduct }) {
           <ArrowRight size={15} />
         </span>
       </div>
+      <div className="product-card-actions">
+        <button
+          type="button"
+          className="button button-outline"
+          onClick={() => void share()}
+          disabled={sharing}
+        >
+          {sharing ? <span className="spinner button-spinner" /> : <Share2 size={15} />}
+          Share
+        </button>
+        <button
+          type="button"
+          className="button button-dark"
+          onClick={() => setDownloadsOpen((open) => !open)}
+          aria-expanded={downloadsOpen}
+          aria-label={`${downloadsOpen ? "Hide" : "Show"} downloads for ${product.name}`}
+        >
+          <ArrowDownToLine size={15} /> Download
+        </button>
+        {shareMessage && (
+          <span className="share-feedback" role="status">{shareMessage}</span>
+        )}
+      </div>
+      {downloadsOpen && (
+        <div className="card-downloads" role="region" aria-label={`${product.name} downloads`}>
+          <button
+            type="button"
+            className="card-downloads-close"
+            onClick={() => setDownloadsOpen(false)}
+            aria-label="Close downloads"
+          >
+            <X size={16} />
+          </button>
+          {availableDownloads.isLoading ? (
+            <span className="card-downloads-state"><span className="spinner" /> Loading downloads…</span>
+          ) : availableDownloads.error ? (
+            <span className="card-downloads-state" role="alert">
+              Could not load downloads.{" "}
+              <button type="button" onClick={() => void availableDownloads.refetch()}>Try again</button>
+            </span>
+          ) : availableDownloads.data?.releases?.some((release) => release.downloads?.length) ? (
+            availableDownloads.data.releases.flatMap((release) =>
+              (release.downloads || []).map((download) => (
+                <a
+                  className="card-download-link"
+                  href={`${API}/api/downloads/${download._id}/redirect`}
+                  key={download._id}
+                >
+                  <ArrowDownToLine size={15} />
+                  {titleCase(download.os)} · {titleCase(download.architecture)} · {download.format.toUpperCase()}
+                </a>
+              )),
+            )
+          ) : (
+            <span className="card-downloads-state">No downloads are available yet.</span>
+          )}
+        </div>
+      )}
     </article>
   );
 }
@@ -885,6 +1065,11 @@ function CopyChecksum({ value }: { value: string }) {
 
 function SoftwarePage() {
   const { slug = "" } = useParams();
+  const [lightbox, setLightbox] = useState<{ url: string; alt: string } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [sharing, setSharing] = useState(false);
+  const [shareMessage, setShareMessage] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
   const query = useQuery({
     queryKey: ["app", slug],
     queryFn: async () =>
@@ -914,9 +1099,43 @@ function SoftwarePage() {
   });
   const [reviewMessage, setReviewMessage] = useState("");
   const [reviewError, setReviewError] = useState("");
+  useEffect(() => {
+    if (!lightbox) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setLightbox(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [lightbox]);
+  function openLightbox(url: string, alt: string) {
+    setZoom(1);
+    setLightbox({ url, alt });
+  }
+  async function shareApplication() {
+    if (!app) return;
+    setSharing(true);
+    setShareMessage("");
+    try {
+      await sharePage(app.name, window.location.href.split("?")[0]);
+      setShareMessage("Link shared.");
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        setShareMessage("Could not share this link.");
+      }
+    } finally {
+      setSharing(false);
+    }
+  }
+  function scrollToDownloads() {
+    document.getElementById("downloads")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
   async function submitReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setReviewError("");
+    setSubmittingReview(true);
     const formElement = event.currentTarget;
     const form = new FormData(event.currentTarget);
     try {
@@ -935,6 +1154,8 @@ function SoftwarePage() {
         (error as Error).message ||
           "Your review could not be submitted. Please try again.",
       );
+    } finally {
+      setSubmittingReview(false);
     }
   }
   return (
@@ -966,7 +1187,14 @@ function SoftwarePage() {
                 <div className="detail-heading">
                   <div className="app-icon app-icon-large">
                     {app.icon?.url ? (
-                      <img src={app.icon.url} alt={`${app.name} icon`} />
+                      <button
+                        type="button"
+                        className="image-zoom-trigger"
+                        onClick={() => openLightbox(app.icon!.url, `${app.name} icon`)}
+                        aria-label={`View ${app.name} icon larger`}
+                      >
+                        <img src={app.icon.url} alt={`${app.name} icon`} />
+                      </button>
                     ) : (
                       <Command size={30} />
                     )}
@@ -992,6 +1220,25 @@ function SoftwarePage() {
                           ? `(${reviews.data.count} reviews)`
                           : "No reviews"}
                       </small>
+                    </div>
+                    <div className="detail-primary-actions">
+                      <button
+                        type="button"
+                        className="button button-dark"
+                        onClick={scrollToDownloads}
+                      >
+                        <ArrowDownToLine size={16} /> Available downloads
+                      </button>
+                      <button
+                        type="button"
+                        className="button button-outline"
+                        onClick={() => void shareApplication()}
+                        disabled={sharing}
+                      >
+                        {sharing ? <span className="spinner button-spinner" /> : <Share2 size={16} />}
+                        Share
+                      </button>
+                      {shareMessage && <span role="status">{shareMessage}</span>}
                     </div>
                   </div>
                 </div>
@@ -1035,11 +1282,24 @@ function SoftwarePage() {
                         .sort((a, b) => (a.order || 0) - (b.order || 0))
                         .map((image) => (
                           <figure key={image.key}>
-                            <img
-                              src={image.url}
-                              alt={image.caption || `${app.name} screenshot`}
-                              loading="lazy"
-                            />
+                            <button
+                              type="button"
+                              className="image-zoom-trigger screenshot-zoom-trigger"
+                              onClick={() =>
+                                openLightbox(
+                                  image.url,
+                                  image.caption || `${app.name} screenshot`,
+                                )
+                              }
+                              aria-label={`Zoom ${image.caption || `${app.name} screenshot`}`}
+                            >
+                              <img
+                                src={image.url}
+                                alt={image.caption || `${app.name} screenshot`}
+                                loading="lazy"
+                              />
+                              <ZoomIn size={20} aria-hidden="true" />
+                            </button>
                             {image.caption && (
                               <figcaption>{image.caption}</figcaption>
                             )}
@@ -1048,7 +1308,7 @@ function SoftwarePage() {
                     </div>
                   </div>
                 )}
-                <div className="detail-section downloads-section">
+                <div className="detail-section downloads-section" id="downloads">
                   <div>
                     <div className="eyebrow">OFFICIAL INSTALLERS</div>
                     <h2>Choose your download.</h2>
@@ -1184,8 +1444,14 @@ function SoftwarePage() {
                         {reviewMessage}
                       </div>
                     )}
-                    <button className="button button-dark">
-                      Submit review
+                    <button
+                      className="button button-dark"
+                      disabled={submittingReview}
+                    >
+                      {submittingReview && (
+                        <span className="spinner button-spinner" />
+                      )}
+                      {submittingReview ? "Submitting…" : "Submit review"}
                     </button>
                     <small className="muted">
                       Reviews are moderated before appearing publicly. Please
@@ -1217,6 +1483,60 @@ function SoftwarePage() {
           </RequestState>
         </div>
       </section>
+      {lightbox && (
+        <div
+          className="image-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label={lightbox.alt}
+          onClick={() => setLightbox(null)}
+        >
+          <div
+            className="image-lightbox-toolbar"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setZoom((value) => Math.max(1, value - 0.25))}
+              disabled={zoom <= 1}
+              aria-label="Zoom out"
+            >
+              <ZoomOut size={20} />
+            </button>
+            <span>{Math.round(zoom * 100)}%</span>
+            <button
+              type="button"
+              onClick={() => setZoom((value) => Math.min(3, value + 0.25))}
+              disabled={zoom >= 3}
+              aria-label="Zoom in"
+            >
+              <ZoomIn size={20} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setLightbox(null)}
+              aria-label="Close image viewer"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <img
+            src={lightbox.url}
+            alt={lightbox.alt}
+            style={{ transform: `scale(${zoom})` }}
+            onClick={(event) => event.stopPropagation()}
+            onWheel={(event) => {
+              event.preventDefault();
+              setZoom((value) =>
+                Math.min(
+                  3,
+                  Math.max(1, value + (event.deltaY < 0 ? 0.1 : -0.1)),
+                ),
+              );
+            }}
+          />
+        </div>
+      )}
     </Shell>
   );
 }
@@ -1409,7 +1729,7 @@ function InfoPage({ page }: { page: string }) {
                     Use the support link on each product page for the most
                     relevant help. For general inquiries, contact us at{" "}
                     {settings.data?.contactEmail ? (
-                      <a href={`mailto:${settings.data.contactEmail}`}>
+                    <a className="support-email" href={`mailto:${settings.data.contactEmail}`}>
                         {settings.data.contactEmail}
                       </a>
                     ) : (
@@ -1514,7 +1834,7 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
         <p>
           {challengeToken
             ? "Enter the 6-digit code sent to your verified administrator email."
-            : "Sign in to manage your software store."}
+            : "Sign in to manage your store."}
         </p>
         {challengeToken ? (
           <label>
@@ -1668,6 +1988,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     : "overview";
   const [reviewFilter, setReviewFilter] = useState("pending");
   const [githubImporting, setGithubImporting] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [githubMessage, setGithubMessage] = useState("");
   const [profileMessage, setProfileMessage] = useState("");
   const [profileMessageKind, setProfileMessageKind] = useState<
@@ -1702,7 +2023,21 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   );
   const [appSearch, setAppSearch] = useState("");
   const [savingApplication, setSavingApplication] = useState(false);
+  const [savingApplicationDetails, setSavingApplicationDetails] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState("");
+  async function runPendingAction(
+    action: string,
+    callback: () => Promise<unknown>,
+  ) {
+    if (pendingAction) return;
+    setPendingAction(action);
+    try {
+      await callback();
+    } finally {
+      setPendingAction(null);
+    }
+  }
   const stats = useQuery({
     queryKey: ["admin-dashboard"],
     queryFn: async () => (await api<ApiResult<any>>("/admin/dashboard")).data,
@@ -2048,6 +2383,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   async function updateApp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selected) return;
+    setSavingApplicationDetails(true);
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     try {
@@ -2088,6 +2424,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         (error as Error).message || "Could not save application details.";
       setAppError(message);
       notify(message, "error");
+    } finally {
+      setSavingApplicationDetails(false);
     }
   }
 
@@ -2123,6 +2461,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     event.preventDefault();
     if (!selected) return;
     setAppError("");
+    setUploadingImages(true);
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     let updated = { ...selected };
@@ -2165,6 +2504,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         `Some images may already have uploaded. ${(error as Error).message} Completed uploads are saved; retry any images that are still missing.`,
       );
       void client.invalidateQueries({ queryKey: ["admin-applications"] });
+    } finally {
+      setUploadingImages(false);
     }
   }
 
@@ -2635,24 +2976,41 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           className={`pin-app-button ${item.isPinned ? "pinned" : ""}`}
                           aria-label={`${item.isPinned ? "Unpin" : "Pin"} ${item.name}`}
                           title={`${item.isPinned ? "Unpin" : "Pin"} application`}
-                          onClick={() => void togglePinned(item)}
+                          disabled={pendingAction !== null}
+                          onClick={() =>
+                            void runPendingAction(`pin-${item._id}`, () =>
+                              togglePinned(item),
+                            )
+                          }
                         >
-                          <Pin size={15} />
+                          {pendingAction === `pin-${item._id}` ? (
+                            <span className="spinner button-spinner" />
+                          ) : (
+                            <Pin size={15} />
+                          )}
                         </button>
                         <button
                           type="button"
                           className={`status-chip ${item.status}`}
                           aria-label={`${item.status === "published" ? "Unpublish" : "Publish"} ${item.name}`}
+                          disabled={pendingAction !== null}
                           onClick={() =>
-                            void changeAppStatus(
-                              item,
-                              item.status === "published"
-                                ? "draft"
-                                : "published",
+                            void runPendingAction(`publish-${item._id}`, () =>
+                              changeAppStatus(
+                                item,
+                                item.status === "published"
+                                  ? "draft"
+                                  : "published",
+                              ),
                             )
                           }
                         >
-                          {item.status === "published"
+                          {pendingAction === `publish-${item._id}` && (
+                            <span className="spinner button-spinner" />
+                          )}
+                          {pendingAction === `publish-${item._id}`
+                            ? "Updating…"
+                            : item.status === "published"
                             ? "Published"
                             : "Draft · Publish"}
                         </button>
@@ -2694,7 +3052,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         }
                       >
                         {githubImporting
-                          ? "Fetching…"
+                          ? <><span className="spinner button-spinner" /> Fetching…</>
                           : "Fetch repository details"}
                       </button>
                       {githubMessage && (
@@ -2800,37 +3158,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         Add an icon and screenshots. Images are uploaded
                         securely to Cloudinary.
                       </p>
-                      <label>
-                        App icon{" "}
-                        <small>JPEG, PNG, WebP, or AVIF · max 5 MB</small>
-                        <input
-                          name="iconFile"
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp,image/avif"
-                        />
-                      </label>
-                      <label>
-                        Screenshots{" "}
-                        <small>Select multiple images · max 10 MB each</small>
-                        <input
-                          name="screenshotFiles"
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp,image/avif"
-                          multiple
-                        />
-                      </label>
-                      <label>
-                        Screenshot captions{" "}
-                        <small>
-                          One optional caption per selected image, in the same
-                          order.
-                        </small>
-                        <textarea
-                          name="screenshotCaptions"
-                          rows={2}
-                          placeholder="A clear view of the main screen"
-                        />
-                      </label>
+                      <ImageUploadFields
+                        iconLabel="App icon"
+                        screenshotsLabel="Screenshots"
+                      />
                     </div>
                     <details className="admin-optional-fields">
                       <summary>Optional details, support, and SEO</summary>
@@ -2891,6 +3222,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         className="button button-dark"
                         disabled={savingApplication}
                       >
+                        {savingApplication && (
+                          <span className="spinner button-spinner" />
+                        )}
                         {savingApplication
                           ? "Saving draft…"
                           : "Save product draft"}{" "}
@@ -3052,53 +3386,87 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               <div className="manage-actions">
                 <button
                   className="status-chip"
-                  onClick={async () => {
-                    try {
-                      await api(
-                        `/admin/applications/${selected._id}/featured`,
-                        { method: "PATCH" },
-                      );
-                      setSelected({
-                        ...selected,
-                        isFeatured: !selected.isFeatured,
-                      });
-                      notify("Featured setting updated.");
-                      void client.invalidateQueries({
-                        queryKey: ["admin-applications"],
-                      });
-                    } catch (error) {
-                      notify(
-                        (error as Error).message ||
-                          "Could not update featured status.",
-                        "error",
-                      );
-                    }
-                  }}
+                  disabled={pendingAction !== null}
+                  onClick={() =>
+                    void runPendingAction(`feature-${selected._id}`, async () => {
+                      try {
+                        await api(
+                          `/admin/applications/${selected._id}/featured`,
+                          { method: "PATCH" },
+                        );
+                        setSelected({
+                          ...selected,
+                          isFeatured: !selected.isFeatured,
+                        });
+                        notify("Featured setting updated.");
+                        void client.invalidateQueries({
+                          queryKey: ["admin-applications"],
+                        });
+                      } catch (error) {
+                        notify(
+                          (error as Error).message ||
+                            "Could not update featured status.",
+                          "error",
+                        );
+                      }
+                    })
+                  }
                 >
+                  {pendingAction === `feature-${selected._id}` && (
+                    <span className="spinner button-spinner" />
+                  )}
                   {selected.isFeatured ? "Featured" : "Feature"}
                 </button>
                 <button
                   className="status-chip"
-                  onClick={() => void togglePinned(selected)}
-                >
-                  <Pin size={13} /> {selected.isPinned ? "Pinned" : "Pin"}
-                </button>
-                <button
-                  className="status-chip"
+                  disabled={pendingAction !== null}
                   onClick={() =>
-                    void changeAppStatus(
-                      selected,
-                      selected.status === "published" ? "draft" : "published",
+                    void runPendingAction(`pin-${selected._id}`, () =>
+                      togglePinned(selected),
                     )
                   }
                 >
-                  {selected.status === "published" ? "Unpublish" : "Publish"}
+                  {pendingAction === `pin-${selected._id}` ? (
+                    <span className="spinner button-spinner" />
+                  ) : (
+                    <Pin size={13} />
+                  )}{" "}
+                  {selected.isPinned ? "Pinned" : "Pin"}
                 </button>
                 <button
                   className="status-chip"
-                  onClick={() => void changeAppStatus(selected, "archived")}
+                  disabled={pendingAction !== null}
+                  onClick={() =>
+                    void runPendingAction(`publish-${selected._id}`, () =>
+                      changeAppStatus(
+                        selected,
+                        selected.status === "published" ? "draft" : "published",
+                      ),
+                    )
+                  }
                 >
-                  Archive
+                  {pendingAction === `publish-${selected._id}` && (
+                    <span className="spinner button-spinner" />
+                  )}
+                  {pendingAction === `publish-${selected._id}`
+                    ? "Updating…"
+                    : selected.status === "published"
+                      ? "Unpublish"
+                      : "Publish"}
+                </button>
+                <button
+                  className="status-chip"
+                  disabled={pendingAction !== null}
+                  onClick={() =>
+                    void runPendingAction(`archive-${selected._id}`, () =>
+                      changeAppStatus(selected, "archived"),
+                    )
+                  }
+                >
+                  {pendingAction === `archive-${selected._id}` && (
+                    <span className="spinner button-spinner" />
+                  )}
+                  {pendingAction === `archive-${selected._id}` ? "Archiving…" : "Archive"}
                 </button>
                 <button
                   className="button button-danger"
@@ -3290,8 +3658,17 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   />
                 </label>
                 {appError && <div className="inline-error">{appError}</div>}
-                <button className="button button-dark">
-                  Save application details <Check size={15} />
+                <button
+                  className="button button-dark"
+                  disabled={savingApplicationDetails}
+                >
+                  {savingApplicationDetails && (
+                    <span className="spinner button-spinner" />
+                  )}
+                  {savingApplicationDetails
+                    ? "Saving…"
+                    : "Save application details"}{" "}
+                  {!savingApplicationDetails && <Check size={15} />}
                 </button>
               </form>
             </details>
@@ -3300,32 +3677,19 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               onSubmit={(event) => void uploadSelectedImages(event)}
             >
               <div className="eyebrow">CLOUDINARY IMAGES</div>
-              <div className="form-two">
-                <label>
-                  Replace icon <small>JPEG, PNG, WebP, AVIF · max 5 MB</small>
-                  <input
-                    name="iconFile"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/avif"
-                  />
-                </label>
-                <label>
-                  Add screenshots{" "}
-                  <small>Multiple images · max 10 MB each</small>
-                  <input
-                    name="screenshotFiles"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/avif"
-                    multiple
-                  />
-                </label>
-              </div>
-              <label>
-                Screenshot captions{" "}
-                <small>One caption per selected image, in order</small>
-                <textarea name="screenshotCaptions" rows={2} />
-              </label>
-              <button className="button button-outline">Upload images</button>
+              <ImageUploadFields
+                iconLabel="Replace icon"
+                screenshotsLabel="Add screenshots"
+              />
+              <button
+                className="button button-outline"
+                disabled={uploadingImages}
+              >
+                {uploadingImages && (
+                  <span className="spinner button-spinner" />
+                )}
+                {uploadingImages ? "Uploading…" : "Upload images"}
+              </button>
               {appError && <div className="inline-error">{appError}</div>}
               <div className="admin-image-gallery">
                 {selected.icon?.url && (
@@ -3981,9 +4345,20 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   <button
                     type="button"
                     className="button button-outline"
-                    onClick={() => void requestEmailVerification()}
+                    disabled={pendingAction !== null}
+                    onClick={() =>
+                      void runPendingAction(
+                        "email-verification-send",
+                        requestEmailVerification,
+                      )
+                    }
                   >
-                    Send verification code
+                    {pendingAction === "email-verification-send" && (
+                      <span className="spinner button-spinner" />
+                    )}
+                    {pendingAction === "email-verification-send"
+                      ? "Sending…"
+                      : "Send verification code"}
                   </button>
                   <div className="security-inline">
                     <input
@@ -3999,10 +4374,20 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     <button
                       type="button"
                       className="button button-dark"
-                      disabled={verificationCode.length !== 6}
-                      onClick={() => void confirmEmailVerification()}
+                      disabled={verificationCode.length !== 6 || pendingAction !== null}
+                      onClick={() =>
+                        void runPendingAction(
+                          "email-verification-confirm",
+                          confirmEmailVerification,
+                        )
+                      }
                     >
-                      Confirm email
+                      {pendingAction === "email-verification-confirm" && (
+                        <span className="spinner button-spinner" />
+                      )}
+                      {pendingAction === "email-verification-confirm"
+                        ? "Confirming…"
+                        : "Confirm email"}
                     </button>
                   </div>
                 </div>
@@ -4015,7 +4400,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 </p>
                 <form
                   className="stack-form"
-                  onSubmit={(event) => void requestEmailChange(event)}
+                  onSubmit={(event) =>
+                    void runPendingAction("email-change-request", () =>
+                      requestEmailChange(event),
+                    )
+                  }
                 >
                   <label>
                     New email
@@ -4030,8 +4419,13 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       required
                     />
                   </label>
-                  <button className="button button-outline">
-                    Send confirmation code
+                  <button className="button button-outline" disabled={pendingAction !== null}>
+                    {pendingAction === "email-change-request" && (
+                      <span className="spinner button-spinner" />
+                    )}
+                    {pendingAction === "email-change-request"
+                      ? "Sending…"
+                      : "Send confirmation code"}
                   </button>
                 </form>
                 <div className="security-inline">
@@ -4046,10 +4440,20 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   <button
                     type="button"
                     className="button button-dark"
-                    disabled={emailChangeCode.length !== 6}
-                    onClick={() => void confirmEmailChange()}
+                    disabled={emailChangeCode.length !== 6 || pendingAction !== null}
+                    onClick={() =>
+                      void runPendingAction(
+                        "email-change-confirm",
+                        confirmEmailChange,
+                      )
+                    }
                   >
-                    Confirm new email
+                    {pendingAction === "email-change-confirm" && (
+                      <span className="spinner button-spinner" />
+                    )}
+                    {pendingAction === "email-change-confirm"
+                      ? "Confirming…"
+                      : "Confirm new email"}
                   </button>
                 </div>
               </div>
@@ -4061,7 +4465,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 </p>
                 <form
                   className="stack-form"
-                  onSubmit={(event) => void changeAdminPassword(event)}
+                  onSubmit={(event) =>
+                    void runPendingAction("password-change", () =>
+                      changeAdminPassword(event),
+                    )
+                  }
                 >
                   <label>
                     Current password
@@ -4082,8 +4490,13 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       required
                     />
                   </label>
-                  <button className="button button-outline">
-                    Update password
+                  <button className="button button-outline" disabled={pendingAction !== null}>
+                    {pendingAction === "password-change" && (
+                      <span className="spinner button-spinner" />
+                    )}
+                    {pendingAction === "password-change"
+                      ? "Updating…"
+                      : "Update password"}
                   </button>
                 </form>
               </div>
@@ -4096,7 +4509,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 {adminProfile.data?.twoFactorEnabled ? (
                   <form
                     className="stack-form"
-                    onSubmit={(event) => void disableTwoFactor(event)}
+                    onSubmit={(event) =>
+                      void runPendingAction("two-factor-disable", () =>
+                        disableTwoFactor(event),
+                      )
+                    }
                   >
                     <label>
                       Current password to disable
@@ -4107,8 +4524,13 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         required
                       />
                     </label>
-                    <button className="button button-danger">
-                      Disable two-factor authentication
+                    <button className="button button-danger" disabled={pendingAction !== null}>
+                      {pendingAction === "two-factor-disable" && (
+                        <span className="spinner button-spinner" />
+                      )}
+                      {pendingAction === "two-factor-disable"
+                        ? "Disabling…"
+                        : "Disable two-factor authentication"}
                     </button>
                   </form>
                 ) : (
@@ -4116,10 +4538,20 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     <button
                       type="button"
                       className="button button-outline"
-                      disabled={!adminProfile.data?.emailVerified}
-                      onClick={() => void startTwoFactorSetup()}
+                      disabled={!adminProfile.data?.emailVerified || pendingAction !== null}
+                      onClick={() =>
+                        void runPendingAction(
+                          "two-factor-setup",
+                          startTwoFactorSetup,
+                        )
+                      }
                     >
-                      Send setup code
+                      {pendingAction === "two-factor-setup" && (
+                        <span className="spinner button-spinner" />
+                      )}
+                      {pendingAction === "two-factor-setup"
+                        ? "Sending…"
+                        : "Send setup code"}
                     </button>
                     <div className="security-inline">
                       <input
@@ -4135,10 +4567,20 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       <button
                         type="button"
                         className="button button-dark"
-                        disabled={twoFactorCode.length !== 6}
-                        onClick={() => void enableTwoFactor()}
+                        disabled={twoFactorCode.length !== 6 || pendingAction !== null}
+                        onClick={() =>
+                          void runPendingAction(
+                            "two-factor-enable",
+                            enableTwoFactor,
+                          )
+                        }
                       >
-                        Enable 2FA
+                        {pendingAction === "two-factor-enable" && (
+                          <span className="spinner button-spinner" />
+                        )}
+                        {pendingAction === "two-factor-enable"
+                          ? "Enabling…"
+                          : "Enable 2FA"}
                       </button>
                     </div>
                   </>

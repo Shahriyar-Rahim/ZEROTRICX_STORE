@@ -152,7 +152,7 @@ app.use(errorHandler);
 const server = app.listen(env.PORT, async () => {
   try {
     await connectDatabase();
-    console.log(`Software store API listening on port ${env.PORT}`);
+    console.log(`ZEROTRICX store API listening on port ${env.PORT}`);
   } catch (error) {
     console.error('API startup failed because MongoDB is unavailable.');
     server.close(() => process.exit(1));

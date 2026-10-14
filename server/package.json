@@ -1,7 +1,7 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "Software store API",
+  "description": "ZEROTRICX store API",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
