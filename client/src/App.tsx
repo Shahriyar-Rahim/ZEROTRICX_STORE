@@ -228,7 +228,7 @@ function Footer() {
                 <Command size={19} />
               )}
             </span>
-            <span>{settings.data?.storeName || "ZEROTRICX STORE"}</span>
+            <span>ZEROTRICX STORE</span>
           </Link>
           <p>
             {settings.data?.storeDescription ||
